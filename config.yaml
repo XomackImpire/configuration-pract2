@@ -1,0 +1,8 @@
+# Основные настройки приложения
+package: bash
+repository_url: https://archive.ubuntu.com/ubuntu/dists/noble/main/binary-amd64/Packages.gz
+test_mode: false
+test_repository: data/test_repository.json
+output_file: dependencies.png
+show_ascii: true
+max_depth: 3
