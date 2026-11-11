@@ -18,29 +18,33 @@ def _is_valid_test_name(name: str) -> bool:
     return isinstance(name, str) and name.isalpha() and name.isupper()
 
 
-def _validate_test_data(
-    package: str, dependencies: list
-) -> None:
+def _validate_test_data(package: str, dependencies: list) -> None:
     """Проверяет корректность данных тестового пакета."""
     if not _is_valid_test_name(package):
         raise ValueError(f"Некорректное имя пакета: {package}")
     if not isinstance(dependencies, list):
-        raise ValueError(f"Зависимости {package} должны быть списком")
+        raise ValueError(
+            f"Зависимости {package} должны быть списком"
+        )
     for item in dependencies:
         if not _is_valid_test_name(item):
-            raise ValueError(f"Некорректная зависимость {item} пакета {package}")
+            raise ValueError(
+                f"Некорректная зависимость {item} пакета {package}"
+            )
 
 
 def load_test_repository(path: str) -> dict[str, tuple[str, ...]]:
     """Загружает тестовый граф из JSON: имя -> список зависимостей."""
     file_path = Path(path)
     if not file_path.is_file():
-        raise FileNotFoundError(f"Тестовый репозиторий не найден: {file_path}")
-    
+        raise FileNotFoundError(
+            f"Тестовый репозиторий не найден: {file_path}"
+        )
+
     data = json.loads(file_path.read_text(encoding="utf-8"))
     if not isinstance(data, dict) or not data:
         raise ValueError("Репозиторий должен быть непустым JSON-объектом")
-    
+
     result: dict[str, tuple[str, ...]] = {}
     for package, dependencies in data.items():
         _validate_test_data(package, dependencies)
@@ -48,14 +52,18 @@ def load_test_repository(path: str) -> dict[str, tuple[str, ...]]:
     return result
 
 
-def _build_test_graph(config: AppConfig, data: dict) -> DependencyGraph:
+def _build_test_graph(
+    config: AppConfig, data: dict
+) -> DependencyGraph:
     """Строит граф по тестовому JSON."""
     if config.package not in data:
-        raise KeyError(f"Пакет '{config.package}' отсутствует в репозитории")
+        raise KeyError(
+            f"Пакет '{config.package}' отсутствует в репозитории"
+        )
     return build_graph(
-        config.package, 
-        lambda name: data.get(name, ()), 
-        config.max_depth
+        config.package,
+        lambda name: data.get(name, ()),
+        config.max_depth,
     )
 
 
@@ -74,22 +82,24 @@ def _build_real_graph(config: AppConfig) -> tuple:
 
 def _print_order(graph: DependencyGraph) -> None:
     """Печатает порядок загрузки зависимостей."""
-    print("\nПорядок загрузки (зависимости раньше зависимого пакета):")
+    print("\nПорядок загрузки (зависимости раньше зависимого):")
     try:
         print(" -> ".join(installation_order(graph)))
     except ValueError as error:
         print(f"Не определён: {error}")
 
 
-def _print_visual(graph: DependencyGraph, config: AppConfig) -> None:
+def _print_visual(
+    graph: DependencyGraph, config: AppConfig
+) -> None:
     """Печатает ASCII-дерево и сохраняет PlantUML/PNG."""
     if config.show_ascii:
         print("\nASCII-дерево:")
         print(ascii_tree(graph))
-    
+
     plantuml_file = save_plantuml(graph, config.output_file)
     print(f"\nИсходный файл PlantUML: {plantuml_file}")
-    
+
     try:
         render_png(plantuml_file, config.output_file)
         print(f"Изображение графа: {config.output_file}")
@@ -111,7 +121,7 @@ def run() -> int:
         graph, direct = _build_real_graph(config)
 
     print("\nПрямые зависимости:")
-    print(", ".join(direct) if direct else "Нет прямых зависимостей")
+    print(", ".join(direct) if direct else "Нет прямых")
 
     cycles = find_cycles(graph)
     print("\nЦиклические зависимости:")
@@ -127,7 +137,7 @@ def run() -> int:
 
 
 def main() -> int:
-    """Точка входа без CLI-аргументов: параметры берутся из config.yaml."""
+    """Точка входа без CLI-аргументов: параметры берутся из YAML."""
     try:
         return run()
     except Exception as error:
