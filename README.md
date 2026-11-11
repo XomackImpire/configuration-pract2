@@ -24,12 +24,6 @@ pip install -r requirements.txt
 python -m src.main
 ```
 
-Или с другим конфигурационным файлом:
-
-```bash
-python -m src.main --config config.yaml
-```
-
 На Linux/macOS можно использовать `./run.sh`, на Windows — `run.bat`.
 
 ## Конфигурация

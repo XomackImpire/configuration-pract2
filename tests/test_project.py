@@ -1,4 +1,4 @@
-"""Автоматические тесты основных функций проекта."""
+"""Автоматические тесты."""
 
 import unittest
 
@@ -7,40 +7,65 @@ from src.graph import build_graph, find_cycles
 from src.main import load_test_repository
 from src.ordering import installation_order
 
+SMALL_DEPTH = 1
+LARGE_DEPTH = 10
+ZERO_DEPTH = 0
+
 
 class AptParserTests(unittest.TestCase):
-    """Проверки разбора индекса Packages."""
+    """Проверки парсера."""
 
     def test_parse_dependencies(self):
+        """Проверяет извлечение зависимостей."""
         raw = (
             b"Package: demo\nVersion: 1.0\n"
             b"Depends: libc6 (>= 2.3), foo | bar\n\n"
             b"Package: libc6\nVersion: 2.4\n\n"
         )
         packages = parse_packages_index(raw)
-        self.assertEqual(packages["demo"].dependencies, ("libc6", "foo"))
-        self.assertEqual(get_direct_dependencies(packages, "demo"), ("libc6", "foo"))
+        self.assertEqual(
+            packages["demo"].dependencies, 
+            ("libc6", "foo")
+        )
+        self.assertEqual(
+            get_direct_dependencies(packages, "demo"), 
+            ("libc6", "foo")
+        )
 
 
 class GraphTests(unittest.TestCase):
-    """Проверки BFS, циклов и порядка загрузки."""
+    """Проверки BFS, циклов и порядка."""
+
+    def _graph(self, edges, depth):
+        return build_graph("A", lambda node: edges[node], depth)
 
     def test_bfs_and_depth(self):
         edges = {"A": ["B", "C"], "B": ["D"], "C": ["E"], "D": [], "E": []}
-        graph = build_graph("A", lambda node: edges[node], 1)
+        graph = self._graph(edges, SMALL_DEPTH)
         self.assertEqual(set(graph.edges), {"A", "B", "C"})
+
+    def test_depth_zero(self):
+        edges = {"A": ["B"], "B": []}
+        graph = self._graph(edges, ZERO_DEPTH)
+        self.assertEqual(set(graph.edges), {"A"})
 
     def test_cycle_detection(self):
         edges = {"A": ["B"], "B": ["C"], "C": ["A"]}
-        graph = build_graph("A", lambda node: edges[node], 10)
+        graph = self._graph(edges, LARGE_DEPTH)
         self.assertTrue(find_cycles(graph))
 
     def test_installation_order(self):
         edges = {"APP": ["LIB"], "LIB": ["BASE"], "BASE": []}
-        graph = build_graph("APP", lambda node: edges[node], 10)
+        graph = build_graph("APP", lambda node: edges[node], LARGE_DEPTH)
         order = installation_order(graph)
         self.assertLess(order.index("BASE"), order.index("LIB"))
         self.assertLess(order.index("LIB"), order.index("APP"))
+
+    def test_installation_order_cycle(self):
+        edges = {"A": ["B"], "B": ["A"]}
+        graph = build_graph("A", lambda node: edges[node], LARGE_DEPTH)
+        with self.assertRaises(ValueError):
+            installation_order(graph)
 
     def test_test_repository(self):
         data = load_test_repository("data/test_repository.json")
